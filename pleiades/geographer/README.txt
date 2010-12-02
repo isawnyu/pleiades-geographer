@@ -28,7 +28,7 @@ Add second place
     
     >>> pid2 = places.invokeFactory('Place', '2', title='Ninoe')
     >>> p2 = places[pid2]
-    >>> _ = p2.addReference(p1, 'hasPart')
+    >>> p2.setParts([p1])
 
 For a "fuzzy" place with no location of its own, we should get the envelope of
 its parts. A point in this case.
@@ -64,10 +64,10 @@ Add another location to the part and check that we get back a box for p1 and p2
 
 Add another place part
 
-    >>> pid3 = places.invokeFactory('Place', '3', title='Ninoe', placeType=['settlement'])
+    >>> pid3 = places.invokeFactory('Place', '3', title='Ninoe')
     >>> p3 = places[pid3]
     >>> _ = p3.invokeFactory('Location', 'location', title='Point 3-1', geometry='Point:[0.0, 0.0]')
-    >>> _ = p2.addReference(p3, 'hasPart')
+    >>> p2.setParts([p1, p3])
     >>> g2 = IGeoreferenced(p2)
     >>> gi2 = g2.__geo_interface__
     >>> gi2['type']
