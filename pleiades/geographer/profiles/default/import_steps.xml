@@ -1,0 +1,10 @@
+<?xml version="1.0"?>
+<import-steps>
+  <import-step
+    id="pleiades.geographer-various"
+    version="20101208-01"
+	handler="pleiades.geographer.setuphandlers.setupVarious"
+	title="Pleiades Geographer Setup"
+    >
+  </import-step>
+</import-steps>

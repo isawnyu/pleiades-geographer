@@ -40,9 +40,18 @@ from zope.interface import implements
 
 log = logging.getLogger('pleiades.geographer')
 
-
 class NotLocatedError(Exception):
     pass
+
+def location_precision(ob, portal, **kwargs):
+    # "unlocated", "rough", "precise"
+    try:
+        g = IGeoreferenced(ob)
+        return g.precision
+    except NotLocatedError:
+        return 'unlocated'
+    except:
+        raise AttributeError
 
 
 class LocationGeoItem(object):
@@ -88,6 +97,10 @@ class LocationGeoItem(object):
     @property
     def coordinates(self):
         return self.geo['coordinates']
+
+    @property
+    def precision(self):
+        return 'rough' * (self.geo.get('relation', None) is not None) or 'precise'
 
     @property
     def crs(self):
@@ -206,6 +219,7 @@ class PlaceGeoItem(object):
     @property
     def bounds(self):
         return self.geo['bbox']
+    
     @property
     def type(self):
         return self.geo['type']
@@ -213,6 +227,10 @@ class PlaceGeoItem(object):
     @property
     def coordinates(self):
         return self.geo['coordinates']
+
+    @property
+    def precision(self):
+        return 'rough' * (self.geo.get('relation', None) is not None) or 'precise'
 
     @property
     def crs(self):
