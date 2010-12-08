@@ -10,8 +10,6 @@ from Products.PloneTestCase import PloneTestCase as ptc
 from Products.PloneTestCase.layer import PloneSite
 from Products.PloneTestCase.layer import onsetup
 
-from pleiades.workspace.tests.base import ContentFunctionalTestCase
-
 ztc.installProduct('ATVocabularyManager')
 ztc.installProduct('Products.CompoundField')
 ztc.installProduct('Products.ATBackRef')
@@ -30,7 +28,7 @@ def setup_pleiades_geographer():
     # Load the ZCML configuration for the optilux.policy package.
     
     fiveconfigure.debug_mode = True
-    import pleiades.kml
+    import pleiades.geographer
     zcml.load_config('configure.zcml', pleiades.geographer)
     fiveconfigure.debug_mode = False
     
@@ -40,30 +38,19 @@ def setup_pleiades_geographer():
 
     ztc.installPackage('pleiades.vocabularies')
     ztc.installPackage('Products.PleiadesEntity')
+    ztc.installPackage('pleiades.geographer')
     
 # The order here is important: We first call the (deferred) function which
 # installs the products we need for the Pleiades package. Then, we let 
 # PloneTestCase set up this product on installation.
 
 setup_pleiades_geographer()
+ptc.setupPloneSite(products=['PleiadesEntity', 'pleiades.geographer'])
 
-ptc.setupPloneSite(products=['PleiadesEntity',])
+class PleiadesGeographerTestCase(ptc.PloneTestCase):
+    """Base class for unit tests"""
 
-import pleiades.geographer
-
-class TestCase(ptc.PloneTestCase):
-    class layer(PloneSite):
-        @classmethod
-        def setUp(cls):
-            fiveconfigure.debug_mode = True
-            zcml.load_config('configure.zcml',
-                             pleiades.geographer)
-            fiveconfigure.debug_mode = False
-
-        @classmethod
-        def tearDown(cls):
-            pass
-
+class PleiadesGeographerFunctionalTestCase(ptc.PloneTestCase):
     def afterSetUp(self):
         # Currently this stuff isn't being torn down between doctests. Why not?
         try:
@@ -71,30 +58,3 @@ class TestCase(ptc.PloneTestCase):
         except:
             pass
 
-
-def test_suite():
-    return unittest.TestSuite([
-
-        # Unit tests
-        #doctestunit.DocFileSuite(
-        #    'README.txt', package='pleiades.geographer',
-        #    setUp=testing.setUp, tearDown=testing.tearDown),
-
-        #doctestunit.DocTestSuite(
-        #    module='pleiades.geographer.mymodule',
-        #    setUp=testing.setUp, tearDown=testing.tearDown),
-
-
-        # Integration tests that use PloneTestCase
-        ztc.ZopeDocFileSuite(
-            'README.txt', package='pleiades.geographer',
-            test_class=TestCase),
-
-        #ztc.FunctionalDocFileSuite(
-        #    'browser.txt', package='pleiades.geographer',
-        #    test_class=TestCase),
-
-        ])
-
-if __name__ == '__main__':
-    unittest.main(defaultTest='test_suite')

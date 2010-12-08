@@ -1,6 +1,7 @@
 <configure
     xmlns="http://namespaces.zope.org/zope"
     xmlns:five="http://namespaces.zope.org/five"
+    xmlns:genericsetup="http://namespaces.zope.org/genericsetup"
     i18n_domain="pleiades.geographer">
 
   <adapter
@@ -19,6 +20,14 @@
     for="Products.PleiadesEntity.content.Place.Place"
     provides="zgeo.geographer.interfaces.IGeoreferenced"
     factory=".geo.PlaceGeoItem"
+    />
+
+  <genericsetup:registerProfile
+    name="default"
+    title="Pleiades Geographer"
+    directory="profiles/default"
+    description="Geographic adapters and search indexes for Pleiades"
+    provides="Products.GenericSetup.interfaces.EXTENSION"
     />
 
 </configure>
