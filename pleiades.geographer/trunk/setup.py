@@ -1,7 +1,7 @@
 from setuptools import setup, find_packages
 import os
 
-version = '0.2'
+version = '0.2.1'
 
 setup(name='pleiades.geographer',
       version=version,
@@ -24,8 +24,8 @@ setup(name='pleiades.geographer',
       include_package_data=True,
       zip_safe=False,
       install_requires=[
-          'zgeo.geographer',
-          'zgeo.plone.geographer'
+      #    'zgeo.geographer',
+      #    'zgeo.plone.geographer'
       ],
       entry_points="""
       # -*- Entry points: -*-
