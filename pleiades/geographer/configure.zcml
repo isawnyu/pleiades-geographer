@@ -11,15 +11,15 @@
     />
 
   <adapter
-    for="Products.PleiadesEntity.content.Feature.Feature"
-    provides="zgeo.geographer.interfaces.IGeoreferenced"
-    factory=".geo.FeatureGeoItem"
-    />
-  
-  <adapter
     for="Products.PleiadesEntity.content.Place.Place"
     provides="zgeo.geographer.interfaces.IGeoreferenced"
     factory=".geo.PlaceGeoItem"
+    />
+
+  <adapter
+    for="Products.CMFPlone.CatalogTool.ExtensibleIndexableObjectWrapper"
+    provides="zgeo.geographer.interfaces.IGeoreferenced"
+    factory=".geo.LocationGeoItem"
     />
 
   <genericsetup:registerProfile
