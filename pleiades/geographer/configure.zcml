@@ -16,11 +16,18 @@
     factory=".geo.PlaceGeoItem"
     />
 
-  <adapter
-    for="Products.CMFPlone.CatalogTool.ExtensibleIndexableObjectWrapper"
-    provides="zgeo.geographer.interfaces.IGeoreferenced"
-    factory=".geo.LocationGeoItem"
+  <five:implements
+    class="Products.PleiadesEntity.content.Location.Location"
+    interface=".interfaces.ILocatable"
     />
+
+  <five:implements
+    class="Products.PleiadesEntity.content.Place.Place"
+    interface=".interfaces.ILocatable"
+    />
+
+  <adapter name="geolocation" factory=".geo.location_geo"/>
+  <adapter name="location_precision" factory=".geo.location_precision"/>
 
   <genericsetup:registerProfile
     name="default"
