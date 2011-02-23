@@ -30,28 +30,23 @@
 import logging
 
 import geojson
-import simplejson
+from plone.indexer.decorator import indexer
+from Products.CMFCore.utils import getToolByName
 from shapely.geometry import asShape
+import simplejson
+from zope.interface import implements
 
 from pleiades.capgrids import Grid
+from pleiades.geographer.interfaces import ILocatable
+from Products.PleiadesEntity.content.interfaces import ILocation
 from Products.PleiadesEntity.content.interfaces import IPlace
-from zgeo.geographer.interfaces import IGeoreferenced, IWriteGeoreferenced
-from zope.interface import implements
+from zgeo.geographer.interfaces import IGeoreferenced
 
 log = logging.getLogger('pleiades.geographer')
 
+
 class NotLocatedError(Exception):
     pass
-
-def location_precision(ob, portal, **kwargs):
-    # "unlocated", "rough", "precise"
-    try:
-        g = IGeoreferenced(ob)
-        return g.precision
-    except NotLocatedError:
-        return 'unlocated'
-    except:
-        raise AttributeError
 
 
 class LocationGeoItem(object):
@@ -75,9 +70,14 @@ class LocationGeoItem(object):
                 s = dc_coverage.rstrip('/')
                 mapid, gridsquare = s.split('/')[4:6]
                 grid = Grid(mapid, gridsquare)
-                self.geo = dict(bbox=grid.bounds, relation='relates', type=grid.type, coordinates=grid.coordinates)
+                self.geo = dict(
+                    bbox=grid.bounds, 
+                    relation='relates', 
+                    type=grid.type, 
+                    coordinates=grid.coordinates)
             except Exception, e:
-                log.warn("%s: %s, %s" % (str(e), context, context.getLocation()))
+                log.warn("%s: %s, %s" % (
+                    str(e), context, context.getLocation()))
                 raise NotLocatedError, "Location cannot be determined"
         else:
             raise NotLocatedError, "Location cannot be determined"
@@ -100,7 +100,8 @@ class LocationGeoItem(object):
 
     @property
     def precision(self):
-        return 'rough' * (self.geo.get('relation', None) is not None) or 'precise'
+        return 'rough' * (
+            self.geo.get('relation', None) is not None) or 'precise'
 
     @property
     def crs(self):
@@ -194,8 +195,7 @@ class PlaceGeoItem(object):
                     fuzzy.append(o)
                     continue
                 try:
-                    b = o.bounds #geometry = o.__geo_interface__.get('geometry', o)
-                    #b = asShape(geometry).bounds
+                    b = o.bounds
                 except:
                     import pdb; pdb.set_trace()
                     raise
@@ -208,13 +208,14 @@ class PlaceGeoItem(object):
             try:
                 x0, x1, y0, y1 = (min(xs), max(xs), min(ys), max(ys))
             except:
-                import pdb; pdb.set_trace()
-                raise
-            #data = '{"type": "%s", "coordinates": %s}' % (
-            #       'Polygon',
+                log.warn("Failed to adapt %s in _geo()", obs, str(e))
+                return None
             coords = [[[x0, y0], [x0, y1], [x1, y1], [x1, y0], [x0, y0]]] 
-            #       )
-            return dict(bbox=(x0, y0, x1, y1), relation='relates' * int(bool(fuzzy)) or None, type='Polygon', coordinates=coords) #geojson.loads(data, object_hook=geojson.GeoJSON.to_instance)
+            return dict(
+                bbox=(x0, y0, x1, y1), 
+                relation='relates' * int(bool(fuzzy)) or None, 
+                type='Polygon', 
+                coordinates=coords)
     
     @property
     def bounds(self):
@@ -230,7 +231,8 @@ class PlaceGeoItem(object):
 
     @property
     def precision(self):
-        return 'rough' * (self.geo.get('relation', None) is not None) or 'precise'
+        return 'rough' * (
+            self.geo.get('relation', None) is not None) or 'precise'
 
     @property
     def crs(self):
@@ -246,10 +248,50 @@ class PlaceGeoItem(object):
             geometry=self.geo
             )
 
+
 def createGeoItem(context):
     """Factory for adapters."""
     if IPlace.providedBy(context):
         return PlaceGeoItem(context)
     else:
         return FeatureGeoItem(context)
+
+
+# To be registered as an indexable attribute adapter
+# For use with pleiades.vaytrouindex
+@indexer(ILocation)
+def location_geo(obj, **kw):
+    url_tool = getToolByName(obj, 'portal_url')
+    portal_path = url_tool.getPortalObject().getPhysicalPath()
+    ob_path = obj.getPhysicalPath()[len(portal_path):]
+    try:
+        g = IGeoreferenced(obj)
+        return dict(
+            id=obj.getPhysicalPath(),
+            bbox=g.bounds,
+            properties=dict(
+                path='/'.join(ob_path),
+                pid=obj.getId(),
+                title=obj.Title(),
+                description=obj.Description(),
+                ),
+            geometry=dict(type=g.type, coordinates=g.coordinates)
+            )
+    except (AttributeError, NotLocatedError, TypeError, ValueError), e:
+        log.warn("Failed to adapt %s in 'location_geo'", obj, str(e))
+        return None
+
+
+@indexer(ILocatable)
+def location_precision(obj, **kw):
+    # "unlocated", "rough", "precise"
+    try:
+        g = IGeoreferenced(obj)
+        return g.precision
+    except NotLocatedError:
+        return 'unlocated'
+    except:
+        log.warn("Failed to adapt %s in 'location_precision'", obj, str(e))
+        raise
+        return None
 
