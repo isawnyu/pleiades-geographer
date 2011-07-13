@@ -36,7 +36,7 @@ from shapely.geometry import asShape
 import simplejson
 from zope.interface import implements
 
-from pleiades.capgrids import Grid
+from pleiades.capgrids import Grid, parseURL
 from pleiades.geographer.interfaces import ILocatable
 from Products.PleiadesEntity.content.interfaces import ILocation
 from Products.PleiadesEntity.content.interfaces import IPlace
@@ -67,8 +67,7 @@ class LocationGeoItem(object):
             self.geo.update(bbox=g.bounds)
         elif dc_coverage.startswith('http://atlantides.org/capgrids'):
             try:
-                s = dc_coverage.rstrip('/')
-                mapid, gridsquare = s.split('/')[4:6]
+                mapid, gridsquare = parseURL(dc_coverage)
                 grid = Grid(mapid, gridsquare)
                 self.geo = dict(
                     bbox=grid.bounds, 
@@ -207,8 +206,8 @@ class PlaceGeoItem(object):
                 ys += b[1::2]
             try:
                 x0, x1, y0, y1 = (min(xs), max(xs), min(ys), max(ys))
-            except:
-                log.warn("Failed to adapt %s in _geo()", obs, str(e))
+            except Exception, e:
+                log.warn("Failed to adapt %s in _geo(): %s", obs, str(e))
                 return None
             coords = [[[x0, y0], [x0, y1], [x1, y1], [x1, y0], [x0, y0]]] 
             return dict(
@@ -278,7 +277,7 @@ def location_geo(obj, **kw):
             geometry=dict(type=g.type, coordinates=g.coordinates)
             )
     except (AttributeError, NotLocatedError, TypeError, ValueError), e:
-        log.warn("Failed to adapt %s in 'location_geo'", obj, str(e))
+        log.warn("Failed to adapt %s in 'location_geo': %s", obj, str(e))
         return None
 
 
