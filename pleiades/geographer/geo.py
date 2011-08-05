@@ -29,7 +29,9 @@
 
 import logging
 
-import geojson
+from AccessControl import getSecurityManager
+from AccessControl.SecurityManagement import newSecurityManager, setSecurityManager
+from AccessControl.User import nobody
 from plone.indexer.decorator import indexer
 from Products.CMFCore.utils import getToolByName
 from shapely.geometry import asShape
@@ -193,11 +195,7 @@ class PlaceGeoItem(object):
                 if o.__geo_interface__.has_key('relation'):
                     fuzzy.append(o)
                     continue
-                try:
-                    b = o.bounds
-                except:
-                    import pdb; pdb.set_trace()
-                    raise
+                b = o.bounds
                 xs += b[0::2]
                 ys += b[1::2]
             for o in fuzzy:
@@ -284,13 +282,18 @@ def location_geo(obj, **kw):
 @indexer(ILocatable)
 def location_precision(obj, **kw):
     # "unlocated", "rough", "precise"
+    # Executed as anonymous to keep unpublished data out
+    sm = getSecurityManager()
     try:
-        g = IGeoreferenced(obj)
-        return g.precision
+        newSecurityManager(None, nobody.__of__(obj.acl_users))
+        geo = IGeoreferenced(obj)
+        setSecurityManager(sm)
+        return geo.precision
     except NotLocatedError:
+        setSecurityManager(sm)
         return 'unlocated'
     except:
-        log.warn("Failed to adapt %s in 'location_precision'", obj, str(e))
-        raise
+        setSecurityManager(sm)
+        log.warn("Failed to adapt %s in 'location_precision'", obj)
         return None
 
