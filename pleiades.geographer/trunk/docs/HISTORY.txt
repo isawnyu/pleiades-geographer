@@ -1,8 +1,8 @@
 Changelog
 =========
 
-1.0 - Unreleased
+0.5 (2011-08-05)
 ----------------
 
-* Initial release
+* Calculate location_precision index value as nobody to keep draft locations out.
 
