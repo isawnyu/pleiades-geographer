@@ -309,7 +309,7 @@ class RepresentativePoint(object):
         else:
             self.relation = 'centroid'
             self.coords = tuple(asShape(
-                {'type': g.type, 'coordinates': g.coordinates}).centroid.coords[0])
+                {'type': g.type, 'coordinates': g.coordinates}).centroid.coords)[0]
 
 # To be registered as an indexable attribute adapter
 # For use with pleiades.vaytrouindex
@@ -370,4 +370,12 @@ def representative_point(obj):
         setSecurityManager(sm)
         log.warn("Failed to adapt %s in 'representative_point'", obj)
         return None
+
+def zgeo_geometry_centroid(brain):
+    """For use on catalog brains"""
+    geom = brain.zgeo_geometry
+    if geom['type'] == 'Point':
+        return tuple(geom['coordinates'])
+    else:
+        return tuple(asShape(geom).centroid.coords)[0]
 
