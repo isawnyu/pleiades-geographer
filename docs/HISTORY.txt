@@ -1,8 +1,11 @@
 Changelog
 =========
 
+0.6 (2011-09-05)
+----------------
+* Adapt names to IGeoreferenced and IRepresentativePoint.
+*
 0.5 (2011-08-05)
 ----------------
-
 * Calculate location_precision index value as nobody to keep draft locations out.
 

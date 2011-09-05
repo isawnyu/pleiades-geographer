@@ -39,9 +39,10 @@ import simplejson
 from zope.interface import implements
 
 from pleiades.capgrids import Grid, parseURL
-from pleiades.geographer.interfaces import ILocatable
+from pleiades.geographer.interfaces import ILocatable, IRepresentativePoint
 from Products.PleiadesEntity.content.interfaces import ILocation
 from Products.PleiadesEntity.content.interfaces import IPlace
+from Products.PleiadesEntity.time import temporal_overlap
 from zgeo.geographer.interfaces import IGeoreferenced
 
 log = logging.getLogger('pleiades.geographer')
@@ -245,6 +246,48 @@ class PlaceGeoItem(object):
             geometry=self.geo
             )
 
+class NameGeoItem(PlaceGeoItem):
+    
+    """Python expression of a GeoRSS simple item, temporally sensitive
+    """
+    implements(IGeoreferenced)
+   
+    def __init__(self, context):
+        """Initialize adapter."""
+        self.context = context
+        self.geo = None
+        x = []
+        place = self.context.aq_parent
+        for o in filter(
+            lambda x: temporal_overlap(self.context, x),
+            place.getLocations()):
+            try:
+                x.append(IGeoreferenced(o))
+            except NotLocatedError:
+                continue
+        if len(x) > 0:
+            self.geo = self._geo(x)
+        else:
+            geo_parts = []
+            for ob in self.context.getFeatures():
+                try:
+                    # rule out reference circles
+                    assert self.context not in ob.getParts()
+                    geo_parts.append(IGeoreferenced(ob))
+                except:
+                    pass
+            for ob in self.context.getParts():
+                try:
+                    # rule out reference circles
+                    assert self.context not in ob.getParts()
+                    geo_parts.append(IGeoreferenced(ob))
+                except:
+                    pass
+            if geo_parts:
+                self.geo = self._geo(geo_parts)
+        if self.geo is None:
+            raise NotLocatedError, "Location cannot be determined"
+
 
 def createGeoItem(context):
     """Factory for adapters."""
@@ -253,6 +296,20 @@ def createGeoItem(context):
     else:
         return FeatureGeoItem(context)
 
+
+class RepresentativePoint(object):
+    implements(IRepresentativePoint)
+    def __init__(self, context):
+        self.context = context
+        g = IGeoreferenced(context)
+        self.precision = g.precision
+        if g.type == 'Point':
+            self.relation = 'exact'
+            self.coords = tuple(g.coordinates)
+        else:
+            self.relation = 'centroid'
+            self.coords = tuple(asShape(
+                {'type': g.type, 'coordinates': g.coordinates}).centroid.coords[0])
 
 # To be registered as an indexable attribute adapter
 # For use with pleiades.vaytrouindex
@@ -278,9 +335,7 @@ def location_geo(obj, **kw):
         log.warn("Failed to adapt %s in 'location_geo': %s", obj, str(e))
         return None
 
-
-@indexer(ILocatable)
-def location_precision(obj, **kw):
+def location_precision(obj):
     # "unlocated", "rough", "precise"
     # Executed as anonymous to keep unpublished data out
     sm = getSecurityManager()
@@ -295,5 +350,24 @@ def location_precision(obj, **kw):
     except:
         setSecurityManager(sm)
         log.warn("Failed to adapt %s in 'location_precision'", obj)
+        return None
+
+@indexer(ILocatable)
+def location_precision_indexer(obj, **kw):
+    return location_precision(obj)
+
+def representative_point(obj):
+    sm = getSecurityManager()
+    try:
+        newSecurityManager(None, nobody.__of__(obj.acl_users))
+        pt = IRepresentativePoint(obj)
+        setSecurityManager(sm)
+        return {'relation': pt.relation, 'coords': pt.coords}
+    except NotLocatedError:
+        setSecurityManager(sm)
+        return None
+    except:
+        setSecurityManager(sm)
+        log.warn("Failed to adapt %s in 'representative_point'", obj)
         return None
 

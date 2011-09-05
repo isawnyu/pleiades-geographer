@@ -16,6 +16,12 @@
     factory=".geo.PlaceGeoItem"
     />
 
+  <adapter
+    for="Products.PleiadesEntity.content.Name.Name"
+    provides="zgeo.geographer.interfaces.IGeoreferenced"
+    factory=".geo.NameGeoItem"
+    />
+
   <five:implements
     class="Products.PleiadesEntity.content.Location.Location"
     interface=".interfaces.ILocatable"
@@ -26,8 +32,19 @@
     interface=".interfaces.ILocatable"
     />
 
+  <five:implements
+    class="Products.PleiadesEntity.content.Name.Name"
+    interface=".interfaces.ILocatable"
+    />
+
+  <adapter
+    for=".interfaces.ILocatable"
+    provides=".interfaces.IRepresentativePoint"
+    factory=".geo.RepresentativePoint"
+    />
+
   <adapter name="geolocation" factory=".geo.location_geo"/>
-  <adapter name="location_precision" factory=".geo.location_precision"/>
+  <adapter name="location_precision" factory=".geo.location_precision_indexer"/>
 
   <genericsetup:registerProfile
     name="default"
