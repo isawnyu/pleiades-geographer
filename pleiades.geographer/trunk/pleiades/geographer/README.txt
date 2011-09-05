@@ -64,6 +64,15 @@ Add another location to the part and check that we get back a box for p1 and p2
   >>> g2.coordinates
   [[[-86.480833333333294, 34.769722222222001], [-86.480833333333294, 35.769722222222001], [-85.480833333333294, 35.769722222222001], [-85.480833333333294, 34.769722222222001], [-86.480833333333294, 34.769722222222001]]]
 
+And check that the representative point is a centroid
+
+  >>> from pleiades.geographer.interfaces import IRepresentativePoint
+  >>> pt = IRepresentativePoint(p1)
+  >>> pt.relation
+  'centroid'
+  >>> pt.coords
+  (-85.980833333333294, 35.269722222222001)
+
 Add another place part
 
   >>> pid3 = places.invokeFactory('Place', '3', title='Ninoe')
@@ -81,19 +90,46 @@ Add another place part
   >>> g2.precision
   'precise'
 
-Test the index value callable
+Check temporally sensitive Name adapter
+---------------------------------------
 
-  >>> from pleiades.geographer.geo import location_precision
-  >>> pid4 = places.invokeFactory('Place', '4', title='Ninoe')
-  >>> p4 = places[pid4]
-  >>> location_precision(p4, None)
-  'unlocated'
-  >>> _ = p4.invokeFactory('Location', 'x', location="http://atlantides.org/capgrids/65/b2")
-  >>> location_precision(p4, None)
-  'rough'
-  >>> p4['x'].setGeometry('Point:[0.0, 0.0]')
-  >>> location_precision(p4, None)
-  'precise'
+  >>> atts1 = [{'timePeriod': "roman", 'confidence': "confident"}]
+  >>> nid = places[pid1].invokeFactory('Name', 'ninoe')
+  >>> ninoe = places[pid1][nid]
+  >>> field = ninoe.getField('attestations')
+  >>> field.resize(len(atts1))
+  >>> ninoe.update(attestations=atts1)
+  >>> x = places[pid1]['x']
+  >>> field = x.getField('attestations')
+  >>> field.resize(len(atts1))
+  >>> x.update(attestations=atts1)
+  >>> gn = IGeoreferenced(ninoe)
+  >>> gn.type
+  'Point'
+  >>> gn.coordinates
+  [-85.480833333333294, 35.769722222222001]
 
+And the representative point
+
+  >>> pt = IRepresentativePoint(ninoe)
+  >>> pt.coords
+  (-85.480833333333294, 35.769722222222001)
+  >>> pt.relation
+  'exact'
+
+If there's no colocated location
+
+  >>> x = places[pid1]['x']
+  >>> field = x.getField('attestations')
+  >>> field.resize(0)
+  >>> x.update(attestations=[])
+  >>> gn = IGeoreferenced(ninoe)
+  Traceback (most recent call last):
+  ...
+  NotLocatedError: Location cannot be determined
+  >>> pt = IRepresentativePoint(ninoe)
+  Traceback (most recent call last):
+  ...
+  NotLocatedError: Location cannot be determined
 
 
