@@ -90,6 +90,7 @@ Add another place part
   >>> g2.precision
   'precise'
 
+
 Check temporally sensitive Name adapter
 ---------------------------------------
 
@@ -131,5 +132,19 @@ If there's no colocated location
   Traceback (most recent call last):
   ...
   NotLocatedError: Location cannot be determined
+
+There have been some problems with 2 locations with identical coordinates:
+
+  >>> from shapely.geometry import asShape
+  >>> del p1['location']
+  >>> lid = p1.invokeFactory('Location', 'y', geometry='Point:[-85.4808333333333, 35.769722222222]')
+  >>> p1.getLocations()
+  []
+  >>> g = IGeoreferenced(p1)
+  >>> asShape(g.geo).centroid.wkt
+  None
+  >>> g.geo
+  {}
+
 
 

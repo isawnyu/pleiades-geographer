@@ -1,6 +1,11 @@
 Changelog
 =========
 
+0.7 (2012-02-02)
+----------------
+* Kick rough locations out of the place georeferencing if there are precise
+  locations.
+
 0.6 (2011-09-05)
 ----------------
 * Adapt names to IGeoreferenced and IRepresentativePoint.
@@ -8,5 +13,6 @@ Changelog
 
 0.5 (2011-08-05)
 ----------------
-* Calculate location_precision index value as nobody to keep draft locations out.
+* Calculate location_precision index value as nobody to keep draft locations
+  out.
 
