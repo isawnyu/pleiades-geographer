@@ -162,6 +162,9 @@ class PlaceGeoItem(object):
             except NotLocatedError:
                 continue
         if len(x) > 0:
+            precise = [xx for xx in x if xx.precision == 'precise']
+            if len(precise) >= 1:
+                x = precise
             self.geo = self._geo(x)
         else:
             geo_parts = []
