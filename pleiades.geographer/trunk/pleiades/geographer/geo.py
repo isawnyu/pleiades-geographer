@@ -61,7 +61,7 @@ class LocationGeoItem(object):
         """
         self.context = context
         dc_coverage = self.context.getLocation()
-        if context.getGeometryRaw():
+        if context._getGeometryRaw():
             self.geo = simplejson.loads(context.getGeometryJSON())
             g = asShape(self.geo)
             self.geo.update(bbox=g.bounds)
