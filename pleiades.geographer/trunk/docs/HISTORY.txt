@@ -1,6 +1,10 @@
 Changelog
 =========
 
+0.8 (2012-09-21)
+----------------
+* Call a location's getGeometryJSON method for geometry representation.
+
 0.7 (2012-02-02)
 ----------------
 * Kick rough locations out of the place georeferencing if there are precise

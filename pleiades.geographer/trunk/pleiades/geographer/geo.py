@@ -61,12 +61,9 @@ class LocationGeoItem(object):
         """
         self.context = context
         dc_coverage = self.context.getLocation()
-        if context.getGeometry():
-            t, c = self.context.getGeometry().split(':')
-            j = '{"type": "%s", "coordinates": %s}' % (t, c)
-            data = simplejson.loads(j)
-            self.geo = dict(data)
-            g = asShape(data)
+        if context.getGeometryRaw():
+            self.geo = simplejson.loads(context.getGeometryJSON())
+            g = asShape(self.geo)
             self.geo.update(bbox=g.bounds)
         elif dc_coverage.startswith('http://atlantides.org/capgrids'):
             try:
