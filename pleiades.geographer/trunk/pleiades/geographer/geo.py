@@ -28,6 +28,7 @@
 # ===========================================================================
 
 import logging
+from operator import itemgetter
 from shapely.geometry import asShape, mapping, MultiPoint, shape
 import simplejson as json
 
@@ -419,13 +420,17 @@ class PlaceLocated(object):
 
     def ratedPreciseGeoms(self):
         return sorted(
-            (rating(o), geometry(o)
-            ) for o in filter(isPrecise, self.locations ), reverse=True)
+            ((rating(o), geometry(o)
+            ) for o in filter(isPrecise, self.locations )), 
+            reverse=True,
+            key=itemgetter(0) )
     
     def ratedGridGeoms(self):
         return sorted(
-            (rating(o), mapping(LocationGeoItem(o))
-            ) for o in filter(isGridded, self.locations ), reverse=True)
+            ((rating(o), mapping(LocationGeoItem(o))
+            ) for o in filter(isGridded, self.locations )), 
+            reverse=True,
+            key=itemgetter(0) )
 
 
 class PlaceConnected(object):
@@ -433,21 +438,20 @@ class PlaceConnected(object):
     
     def __init__(self, context):
         self.context = context
-        self.connections = list(
-            self.context.getRefs("connectsWith"
-                ) + self.context.getBRefs("connectsWith") )
+        self.connections = set(self.context.getRefs("connectsWith")
+            ).symmetric_difference(set(self.context.getBRefs("connectsWith")) )
 
     def preciseExtents(self):
         return map(lambda x: x.extent,
             filter(
                 lambda x: x.precision == "precise",
-                (PlaceExtent(o) for o in self.connections) ))
+                (PlaceExtent(o, depth=0) for o in self.connections) ))
 
     def relatedExtents(self):
         return map(lambda x: x.extent,
             filter(
                 lambda x: x.precision in ("related", "rough"),
-                (PlaceExtent(o) for o in self.connections) ))
+                (PlaceExtent(o, depth=0) for o in self.connections) ))
 
 # Extents
 
@@ -471,8 +475,10 @@ class PlaceExtent(object):
     implements(IExtent)
     ## Status: working, tests pass 10/29.
 
-    def __init__(self, context):
+    def __init__(self, context, depth=1):
         self.context = context
+        # We only look for connections of this place if depth > 0.
+        self.depth = depth
 
     @memoize
     def reprExtent(self):
@@ -496,7 +502,7 @@ class PlaceExtent(object):
             return hull(points), "precise"
 
         connected = PlaceConnected(self.context)
-        extents = connected.preciseExtents()
+        extents = self.depth and connected.preciseExtents() or None
         if extents:
             for g in extents:
                 points.extend(list(explode(g['coordinates'])))
@@ -508,7 +514,7 @@ class PlaceExtent(object):
                 points.extend(list(explode(g['coordinates'])))
             return hull(points), "rough"
                 
-        extents = connected.relatedExtents()
+        extents = self.depth and connected.relatedExtents() or None
         if extents:
             for g in extents:
                 points.extend(list(explode(g['coordinates'])))
