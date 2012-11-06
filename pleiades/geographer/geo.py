@@ -420,12 +420,12 @@ class PlaceLocated(object):
     def ratedPreciseGeoms(self):
         return sorted(
             (rating(o), geometry(o)
-            ) for o in filter(isPrecise, self.locations ))
+            ) for o in filter(isPrecise, self.locations ), reverse=True)
     
     def ratedGridGeoms(self):
         return sorted(
             (rating(o), mapping(LocationGeoItem(o))
-            ) for o in filter(isGridded, self.locations ))
+            ) for o in filter(isGridded, self.locations ), reverse=True)
 
 
 class PlaceConnected(object):
