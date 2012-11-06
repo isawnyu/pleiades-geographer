@@ -1,6 +1,12 @@
 Changelog
 =========
 
+0.9 (2012-11-02)
+----------------
+* Addition of IExtent, IRepresentativePoint interfaces.
+* The zgeo_geometry metadata now uses IExtent.
+* Addition of reprPt, bbox metadata, using IRepresentativePoint and IExtent.
+
 0.8 (2012-09-21)
 ----------------
 * Call a location's getGeometryJSON method for geometry representation.
