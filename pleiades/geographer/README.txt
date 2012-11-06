@@ -68,8 +68,8 @@ And check that the representative point is a centroid
 
   >>> from pleiades.geographer.interfaces import IRepresentativePoint
   >>> pt = IRepresentativePoint(p1)
-  >>> pt.relation
-  'centroid'
+  >>> pt.precision
+  'precise'
   >>> pt.coords
   (-85.980833333333294, 35.269722222222001)
 
@@ -115,8 +115,8 @@ And the representative point
   >>> pt = IRepresentativePoint(ninoe)
   >>> pt.coords
   (-85.480833333333294, 35.769722222222001)
-  >>> pt.relation
-  'exact'
+  >>> pt.precision
+  'precise'
 
 If there's no colocated location
 
@@ -129,22 +129,8 @@ If there's no colocated location
   ...
   NotLocatedError: Location cannot be determined
   >>> pt = IRepresentativePoint(ninoe)
-  Traceback (most recent call last):
-  ...
-  NotLocatedError: Location cannot be determined
-
-There have been some problems with 2 locations with identical coordinates:
-
-  >>> from shapely.geometry import asShape
-  >>> del p1['location']
-  >>> lid = p1.invokeFactory('Location', 'y', geometry='Point:[-85.4808333333333, 35.769722222222]')
-  >>> p1.getLocations()
-  []
-  >>> g = IGeoreferenced(p1)
-  >>> asShape(g.geo).centroid.wkt
-  None
-  >>> g.geo
-  {}
-
-
+  >>> pt.precision
+  'unlocated'
+  >>> pt.coords is None
+  True
 

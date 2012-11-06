@@ -43,8 +43,29 @@
     factory=".geo.RepresentativePoint"
     />
 
-  <adapter name="geolocation" factory=".geo.location_geo"/>
-  <adapter name="location_precision" factory=".geo.location_precision_indexer"/>
+  <adapter
+    for="Products.PleiadesEntity.content.interfaces.IPlace"
+    provides=".interfaces.IRepresentativePoint"
+    factory=".geo.PlaceReprPt"
+    />
+
+  <adapter
+    for=".interfaces.ILocatable"
+    provides=".interfaces.IExtent"
+    factory=".geo.LocationExtent"
+    />
+
+  <adapter
+    for="Products.PleiadesEntity.content.interfaces.IPlace"
+    provides=".interfaces.IExtent"
+    factory=".geo.PlaceExtent"
+    />
+
+  <adapter name="geolocation" factory=".catalog.location_geo"/>
+  <adapter name="location_precision" factory=".catalog.location_precision_indexer"/>
+  <adapter name="zgeo_geometry" factory=".catalog.zgeo_geometry_value"/>
+  <adapter name="reprPt" factory=".catalog.reprPt_value"/>
+  <adapter name="bbox" factory=".catalog.bbox_value"/>
 
   <genericsetup:registerProfile
     name="default"

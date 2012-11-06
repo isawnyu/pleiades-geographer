@@ -28,24 +28,28 @@
 # ===========================================================================
 
 import logging
+from shapely.geometry import asShape, mapping, MultiPoint, shape
+import simplejson as json
 
 from AccessControl import getSecurityManager
-from AccessControl.SecurityManagement import newSecurityManager, setSecurityManager
+from AccessControl.SecurityManagement import newSecurityManager
+from AccessControl.SecurityManagement import setSecurityManager
 from AccessControl.User import nobody
-from plone.indexer.decorator import indexer
-from Products.CMFCore.utils import getToolByName
-from shapely.geometry import asShape
-import simplejson
+from plone.memoize.instance import memoize
 from zope.interface import implements
 
 from pleiades.capgrids import Grid, parseURL
+from pleiades.contentratings.basic import rating
 from pleiades.geographer.interfaces import ILocatable, IRepresentativePoint
+from pleiades.geographer.interfaces import IConnected, ILocated, IExtent
 from Products.PleiadesEntity.content.interfaces import ILocation
 from Products.PleiadesEntity.content.interfaces import IPlace
 from Products.PleiadesEntity.time import temporal_overlap
 from zgeo.geographer.interfaces import IGeoreferenced
 
 log = logging.getLogger('pleiades.geographer')
+
+PRECISIONS = ['precise', 'related', 'rough', 'unlocated']
 
 
 class NotLocatedError(Exception):
@@ -62,7 +66,7 @@ class LocationGeoItem(object):
         self.context = context
         dc_coverage = self.context.getLocation()
         if context._getGeometryRaw():
-            self.geo = simplejson.loads(context.getGeometryJSON())
+            self.geo = json.loads(context.getGeometryJSON())
             g = asShape(self.geo)
             self.geo.update(bbox=g.bounds)
         elif dc_coverage.startswith('http://atlantides.org/capgrids'):
@@ -298,78 +302,83 @@ def createGeoItem(context):
 
 
 class RepresentativePoint(object):
+    """Adapter for Locations and Names."""
     implements(IRepresentativePoint)
+    
     def __init__(self, context):
         self.context = context
-        g = IGeoreferenced(context)
-        self.precision = g.precision
-        if g.type == 'Point':
-            self.relation = 'exact'
-            self.coords = tuple(g.coordinates)
-        else:
-            self.relation = 'centroid'
-            self.coords = tuple(asShape(
-                {'type': g.type, 'coordinates': g.coordinates}).centroid.coords)[0]
+        try:
+            g = IGeoreferenced(context)
+            self.precision = g.precision
+            if not g.coordinates:
+                raise NotLocatedError, "Adapter has no coordinates"
+            if g.type == 'Point':
+                self.coords = tuple(g.coordinates)
+            else:
+                self.coords = tuple(asShape(
+                    {'type': g.type, 'coordinates': g.coordinates}
+                    ).centroid.coords )[0]
+        except NotLocatedError:
+            self.precision = "unlocated"
+            self.coords = None
 
-# To be registered as an indexable attribute adapter
-# For use with pleiades.vaytrouindex
-@indexer(ILocation)
-def location_geo(obj, **kw):
-    url_tool = getToolByName(obj, 'portal_url')
-    portal_path = url_tool.getPortalObject().getPhysicalPath()
-    ob_path = obj.getPhysicalPath()[len(portal_path):]
-    try:
-        g = IGeoreferenced(obj)
-        return dict(
-            id=obj.getPhysicalPath(),
-            bbox=g.bounds,
-            properties=dict(
-                path='/'.join(ob_path),
-                pid=obj.getId(),
-                title=obj.Title(),
-                description=obj.Description(),
-                ),
-            geometry=dict(type=g.type, coordinates=g.coordinates)
-            )
-    except (AttributeError, NotLocatedError, TypeError, ValueError), e:
-        log.warn("Failed to adapt %s in 'location_geo': %s", obj, str(e))
-        return None
+    @property
+    def x(self):
+        try:
+            return self.coords[0]
+        except TypeError:
+            raise NotLocatesError, "Context %s is unlocated" % self.context
+    @property
+    def y(self):
+        try:
+            return self.coords[1]
+        except TypeError:
+            raise NotLocatesError, "Context %s is unlocated" % self.context
 
-def location_precision(obj):
-    # "unlocated", "rough", "precise"
+
+# Functions to support synoptic views of Pleiades data.
+
+def extent(obj):
+    # "unlocated", "rough", "related", "precise"
     # Executed as anonymous to keep unpublished data out
     sm = getSecurityManager()
     try:
         newSecurityManager(None, nobody.__of__(obj.acl_users))
-        geo = IGeoreferenced(obj)
+        ex = IExtent(obj)
         setSecurityManager(sm)
-        return geo.precision
+        return {'extent': ex.extent, 'precision': ex.precision}
     except NotLocatedError:
         setSecurityManager(sm)
-        return 'unlocated'
+        return {'extent': None, 'precision': 'unlocated'}
     except:
         setSecurityManager(sm)
         log.warn("Failed to adapt %s in 'location_precision'", obj)
         return None
 
-@indexer(ILocatable)
-def location_precision_indexer(obj, **kw):
-    return location_precision(obj)
+
+def location_precision(obj):
+    # "unlocated", "rough", "related", "precise"
+    # Executed as anonymous to keep unpublished data out
+    ex = extent(obj)
+    return ex and ex.get('precision', 'unlocated') or None
+
 
 def representative_point(obj):
+    # Get a representative point as Anonymous."""
     sm = getSecurityManager()
     try:
         newSecurityManager(None, nobody.__of__(obj.acl_users))
         pt = IRepresentativePoint(obj)
         setSecurityManager(sm)
-        return {'relation': pt.relation, 'coords': pt.coords}
+        return {'precision': pt.precision, 'coords': pt.coords}
     except NotLocatedError:
         setSecurityManager(sm)
-        return None
+        return {'precision': 'unlocated', 'coords': None}
     except:
         setSecurityManager(sm)
         log.warn("Failed to adapt %s in 'representative_point'", obj)
         return None
+
 
 def zgeo_geometry_centroid(brain):
     """For use on catalog brains"""
@@ -378,4 +387,248 @@ def zgeo_geometry_centroid(brain):
         return tuple(geom['coordinates'])
     else:
         return tuple(asShape(geom).centroid.coords)[0]
+
+# New implementations of ILocated and IConnected
+
+def geometry(o):
+    """Returning a mapping or None."""
+    if ILocation.providedBy(o) and o._getGeometryRaw():
+        geom = json.loads(o.getGeometryJSON())
+        g = shape(geom)
+        geom.update(bbox=g.bounds)
+        return geom
+    else:
+        return None
+
+
+def isPrecise(o):
+    return ILocation.providedBy(o) and o._getGeometryRaw()
+
+
+def isGridded(o):
+    return ILocation.providedBy(o) and o.getLocation(
+        ).startswith('http://atlantides.org/capgrids')
+
+
+class PlaceLocated(object):
+    implements(ILocated)
+    
+    def __init__(self, context):
+        self.context = context
+        self.locations = self.context.getLocations()
+
+    def ratedPreciseGeoms(self):
+        return sorted(
+            (rating(o), geometry(o)
+            ) for o in filter(isPrecise, self.locations ))
+    
+    def ratedGridGeoms(self):
+        return sorted(
+            (rating(o), mapping(LocationGeoItem(o))
+            ) for o in filter(isGridded, self.locations ))
+
+
+class PlaceConnected(object):
+    implements(IConnected)
+    
+    def __init__(self, context):
+        self.context = context
+        self.connections = list(
+            self.context.getRefs("connectsWith"
+                ) + self.context.getBRefs("connectsWith") )
+
+    def preciseExtents(self):
+        return map(lambda x: x.extent,
+            filter(
+                lambda x: x.precision == "precise",
+                (PlaceExtent(o) for o in self.connections) ))
+
+    def relatedExtents(self):
+        return map(lambda x: x.extent,
+            filter(
+                lambda x: x.precision in ("related", "rough"),
+                (PlaceExtent(o) for o in self.connections) ))
+
+# Extents
+
+def explode(coords):
+    """Explode a GeoJSON geometry's coordinates object and yield 
+    coordinate tuples."""
+    for e in coords:
+        if isinstance(e, (float, int, long)):
+            yield coords
+            break
+        else:
+            for f in explode(e):
+                yield f
+
+
+def hull(points):
+    return mapping(MultiPoint(points).convex_hull)
+
+
+class PlaceExtent(object):
+    implements(IExtent)
+    ## Status: working, tests pass 10/29.
+
+    def __init__(self, context):
+        self.context = context
+
+    @memoize
+    def reprExtent(self):
+
+        points = []
+
+        located = PlaceLocated(self.context)
+        rated = located.ratedPreciseGeoms()
+        
+        if rated:
+            positively_rated = filter(lambda x: x[0] > 0, rated)
+            unrated = filter(lambda x: x[0] == 0, rated)
+
+            if positively_rated:
+                for r, g in positively_rated:
+                    points.extend(list(explode(g['coordinates'])))
+            if not points and unrated:
+                for r, g in unrated:
+                    points.extend(list(explode(g['coordinates'])))
+            
+            return hull(points), "precise"
+
+        connected = PlaceConnected(self.context)
+        extents = connected.preciseExtents()
+        if extents:
+            for g in extents:
+                points.extend(list(explode(g['coordinates'])))
+            return hull(points), "related"
+
+        rated = located.ratedGridGeoms()
+        if rated:
+            for r, g in rated:
+                points.extend(list(explode(g['coordinates'])))
+            return hull(points), "rough"
+                
+        extents = connected.relatedExtents()
+        if extents:
+            for g in extents:
+                points.extend(list(explode(g['coordinates'])))
+            return hull(points), "rough"
+
+        # The end.
+        return None, "unlocated"
+
+    @property
+    def extent(self):
+        """A Polygon."""
+        return self.reprExtent()[0]
+
+    @property
+    def precision(self):
+        return self.reprExtent()[1]
+
+
+class LocationExtent(PlaceExtent):
+    implements(IExtent)
+
+    @memoize
+    def reprExtent(self):
+        try:
+            g = IGeoreferenced(self.context)
+            points = list(explode(g.coordinates))
+            return hull(points), g.precision
+        except:
+            return None, "unlocated"
+
+
+# Repesentative Point
+
+class PlaceReprPt(object):
+    implements(IRepresentativePoint)
+
+    def __init__(self, context):
+        self.context = context
+
+    @memoize
+    def reprPoint(self):
+        
+        located = PlaceLocated(self.context)
+        rated = located.ratedPreciseGeoms()
+        if rated:
+            sum_positive = []
+            weight_positive = 0.0
+            sum_unrated = []
+            weight_unrated = 0.0
+            
+            for r, g in rated:
+                centroid = shape(g).centroid
+                if r > 0.0:
+                    sum_positive[:] = (
+                        (sum_positive and sum_positive[0] or 0.0) + r*centroid.x, 
+                        (sum_positive and sum_positive[1] or 0.0) + r*centroid.y )
+                    weight_positive += r
+                else:
+                    sum_unrated[:] = (
+                        (sum_unrated and sum_unrated[0] or 0.0) + centroid.x, 
+                        (sum_unrated and sum_unrated[1] or 0.0) + centroid.y )
+                    weight_unrated += 1.0
+            
+            if weight_positive > 0.0:
+                return (
+                    sum_positive[0]/weight_positive, 
+                    sum_positive[1]/weight_positive,
+                    "precise" )
+            elif weight_unrated > 0.0:
+                return (
+                    sum_unrated[0]/weight_unrated, 
+                    sum_unrated[1]/weight_unrated,
+                    "precise" )
+            else:
+                raise RuntimeError, "Rated locations summed improperly"
+
+        connected = PlaceConnected(self.context)
+        extents = connected.preciseExtents()
+        if extents:
+            c = []
+            for g in extents:
+                centroid = shape(g).centroid
+                c[:] = (c and c[0] or 0.0
+                    ) + centroid.x, (c and c[1] or 0.0) + centroid.y
+            return c[0]/len(extents), c[1]/len(extents), "related"
+        
+        rated = located.ratedGridGeoms()
+        if rated:
+            c = []
+            for r, g in rated:
+                centroid = shape(g).centroid
+                c[:] = (c and c[0] or 0.0
+                    ) + centroid.x, (c and c[1] or 0.0) + centroid.y
+            return c[0]/len(rated), c[1]/len(rated), "rough"
+                
+        extents = connected.relatedExtents()
+        if extents:
+            c = []
+            for g in extents:
+                centroid = shape(g).centroid
+                c[:] = (c and c[0] or 0.0
+                    ) + centroid.x, (c and c[1] or 0.0) + centroid.y
+            return c[0]/len(extents), c[1]/len(extents), "rough"
+
+        # The end.
+        return None, None, "unlocated"
+
+    @property
+    def coords(self):
+        return tuple(self.reprPoint()[:2])
+    
+    @property
+    def x(self):
+        return self.reprPoint()[0]
+
+    @property
+    def y(self):
+        return self.reprPoint()[1]
+    
+    @property
+    def precision(self):
+        return self.reprPoint()[2]
 
