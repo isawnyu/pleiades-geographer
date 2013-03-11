@@ -66,12 +66,12 @@ class LocationGeoItem(object):
         """
         self.context = context
         dc_coverage = self.context.getLocation()
-        if context._getGeometryRaw():
-            self.geo = json.loads(context.getGeometryJSON())
-            g = asShape(self.geo)
-            self.geo.update(bbox=g.bounds)
-        elif dc_coverage.startswith('http://atlantides.org/capgrids'):
-            try:
+        try:
+            if context._getGeometryRaw():
+                self.geo = json.loads(context.getGeometryJSON())
+                g = asShape(self.geo)
+                self.geo.update(bbox=g.bounds)
+            elif dc_coverage.startswith('http://atlantides.org/capgrids'):
                 mapid, gridsquare = parseURL(dc_coverage)
                 grid = Grid(mapid, gridsquare)
                 self.geo = dict(
@@ -79,12 +79,10 @@ class LocationGeoItem(object):
                     relation='relates', 
                     type=grid.type, 
                     coordinates=grid.coordinates)
-            except Exception, e:
-                log.warn("%s: %s, %s" % (
-                    str(e), context, context.getLocation()))
-                raise NotLocatedError, "Location cannot be determined"
-        else:
-            raise NotLocatedError, "Location cannot be determined"
+            else:
+                raise ValueError("Context is unlocated")
+        except Exception, e:
+            raise ValueError("Object cannot be adapted")
             
     @property
     def __geo_interface__(self):
@@ -161,7 +159,7 @@ class PlaceGeoItem(object):
         for o in self.context.getLocations():
             try:
                 x.append(IGeoreferenced(o))
-            except NotLocatedError:
+            except ValueError:
                 continue
         if len(x) > 0:
             precise = [xx for xx in x if xx.precision == 'precise']
@@ -268,7 +266,7 @@ class NameGeoItem(PlaceGeoItem):
             place.getLocations()):
             try:
                 x.append(IGeoreferenced(o))
-            except NotLocatedError:
+            except ValueError:
                 continue
         if len(x) > 0:
             self.geo = self._geo(x)
@@ -319,7 +317,7 @@ class RepresentativePoint(object):
                 self.coords = tuple(asShape(
                     {'type': g.type, 'coordinates': g.coordinates}
                     ).centroid.coords )[0]
-        except NotLocatedError:
+        except (ValueError, NotLocatedError):
             self.precision = "unlocated"
             self.coords = None
 
@@ -403,7 +401,11 @@ def geometry(o):
 
 
 def isPrecise(o):
-    return ILocation.providedBy(o) and o._getGeometryRaw()
+    try:
+        return (ILocation.providedBy(o) and o._getGeometryRaw() and
+            IGeoreferenced(o))
+    except (ValueError, NotLocatedError):
+        return False
 
 
 def isGridded(o):
