@@ -1,6 +1,10 @@
 Changelog
 =========
 
+0.10.1 (2013-03-11)
+-----------------
+* Don't mistake unadaptable/broken locations for precise locations.
+
 0.10 (2012-12-17)
 -----------------
 * Addition of @where view.
