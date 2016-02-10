@@ -5,21 +5,23 @@
     xmlns:browser="http://namespaces.zope.org/browser"
     i18n_domain="pleiades.geographer">
 
+  <include package="collective.geo.geographer"/>
+
   <adapter
     for="Products.PleiadesEntity.content.Location.Location"
-    provides="zgeo.geographer.interfaces.IGeoreferenced"
+    provides="collective.geo.geographer.interfaces.IGeoreferenced"
     factory=".geo.LocationGeoItem"
     />
 
   <adapter
     for="Products.PleiadesEntity.content.Place.Place"
-    provides="zgeo.geographer.interfaces.IGeoreferenced"
+    provides="collective.geo.geographer.interfaces.IGeoreferenced"
     factory=".geo.PlaceGeoItem"
     />
 
   <adapter
     for="Products.PleiadesEntity.content.Name.Name"
-    provides="zgeo.geographer.interfaces.IGeoreferenced"
+    provides="collective.geo.geographer.interfaces.IGeoreferenced"
     factory=".geo.NameGeoItem"
     />
 

@@ -12,7 +12,7 @@ First place, explicitly located
   >>> pid1 = places.invokeFactory('Place', '1', title='Ninoe')
   >>> p1 = places[pid1]
   >>> lid = p1.invokeFactory('Location', 'location', title='Point 1', geometry='Point:[-86.4808333333333, 34.769722222222]')
-  >>> from zgeo.geographer.interfaces import IGeoreferenced
+  >>> from collective.geo.geographer.interfaces import IGeoreferenced
   >>> g = IGeoreferenced(p1)
   >>> gi = g.__geo_interface__
   >>> gi['type']
