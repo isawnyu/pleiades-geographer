@@ -1,20 +1,15 @@
-
-import logging
-
 from AccessControl import getSecurityManager
 from AccessControl.SecurityManagement import newSecurityManager
 from AccessControl.SecurityManagement import setSecurityManager
 from AccessControl.User import nobody
-from plone.indexer.decorator import indexer
-from Products.CMFCore import permissions
-from Products.CMFCore.utils import getToolByName
-from Products.CMFPlone.CatalogTool import registerIndexableAttribute
-from shapely.geometry import shape
-
 from pleiades.geographer.geo import location_precision, NotLocatedError
 from pleiades.geographer.interfaces import IExtent, ILocatable
 from pleiades.geographer.interfaces import IRepresentativePoint
+from plone.indexer.decorator import indexer
+from Products.CMFCore.utils import getToolByName
 from Products.PleiadesEntity.content.interfaces import ILocation
+from shapely.geometry import shape
+import logging
 
 log = logging.getLogger('pleiades.geographer')
 
@@ -39,13 +34,15 @@ def location_geo(obj, **kw):
                 ),
             geometry=ex
             )
-    except (AttributeError, NotLocatedError, TypeError, ValueError), e:
+    except (AttributeError, NotLocatedError, TypeError, ValueError) as e:
         log.warn("Failed to adapt %s in 'location_geo': %s", obj, str(e))
         return None
+
 
 @indexer(ILocatable)
 def location_precision_indexer(obj, **kw):
     return location_precision(obj)
+
 
 @indexer(ILocatable)
 def zgeo_geometry_value(obj, **kw):
@@ -60,6 +57,7 @@ def zgeo_geometry_value(obj, **kw):
         setSecurityManager(sm)
         raise AttributeError
 
+
 @indexer(ILocatable)
 def reprPt_value(obj, **kw):
     # Execute this as 'Anonymous'
@@ -73,6 +71,7 @@ def reprPt_value(obj, **kw):
         setSecurityManager(sm)
         raise AttributeError
 
+
 @indexer(ILocatable)
 def bbox_value(obj, **kw):
     # Execute this as 'Anonymous'
@@ -85,4 +84,3 @@ def bbox_value(obj, **kw):
     except:
         setSecurityManager(sm)
         raise AttributeError
-        
