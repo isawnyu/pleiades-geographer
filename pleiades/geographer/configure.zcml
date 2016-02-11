@@ -74,7 +74,7 @@
     for=".interfaces.ILocatable"
     name="where"
     class=".views.Where"
-    permission="zope.View" />
+    permission="zope2.View" />
 
   <genericsetup:registerProfile
     name="default"
