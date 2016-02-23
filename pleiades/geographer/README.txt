@@ -20,31 +20,13 @@ First place, explicitly located
   >>> g.type
   'Point'
   >>> g.coordinates
-  [-86.480833333333294, 34.769722222222001]
+  [-86.4808333333333, 34.769722222222]
   >>> g.bounds
-  (-86.480833333333294, 34.769722222222001, -86.480833333333294, 34.769722222222001)
+  (-86.4808333333333, 34.769722222222, -86.4808333333333, 34.769722222222)
   >>> g.precision
   'precise'
 
-Add second place
-  
-  >>> pid2 = places.invokeFactory('Place', '2', title='Ninoe')
-  >>> p2 = places[pid2]
-  >>> p2.setParts([p1])
-
-For a "fuzzy" place with no location of its own, we should get the envelope of
-its parts. A point in this case.
-
-  >>> g = IGeoreferenced(p2)
-  >>> gi = g.__geo_interface__
-  >>> gi['type']
-  'Feature'
-  >>> g.type
-  'Point'
-  >>> g.coordinates
-  [-86.480833333333294, 34.769722222222001]
-
-Add another location to the part and check that we get back a box for p1 and p2
+Add another location to the place and check that we get back a box for p1 and p2
 
   >>> lid = p1.invokeFactory('Location', 'x', geometry='Point:[-85.4808333333333, 35.769722222222]')
   >>> g = IGeoreferenced(p1)
@@ -54,15 +36,15 @@ Add another location to the part and check that we get back a box for p1 and p2
   >>> g.type
   'Polygon'
   >>> g.coordinates
-  [[[-86.480833333333294, 34.769722222222001], [-86.480833333333294, 35.769722222222001], [-85.480833333333294, 35.769722222222001], [-85.480833333333294, 34.769722222222001], [-86.480833333333294, 34.769722222222001]]]
-  >>> g2 = IGeoreferenced(p2)
-  >>> gi2 = g2.__geo_interface__
-  >>> gi2['type']
+  [[[-86.4808333333333, 34.769722222222], [-86.4808333333333, 35.769722222222], [-85.4808333333333, 35.769722222222], [-85.4808333333333, 34.769722222222], [-86.4808333333333, 34.769722222222]]]
+  >>> g = IGeoreferenced(p1)
+  >>> gi = g.__geo_interface__
+  >>> gi['type']
   'Feature'
-  >>> g2.type
+  >>> g.type
   'Polygon'
-  >>> g2.coordinates
-  [[[-86.480833333333294, 34.769722222222001], [-86.480833333333294, 35.769722222222001], [-85.480833333333294, 35.769722222222001], [-85.480833333333294, 34.769722222222001], [-86.480833333333294, 34.769722222222001]]]
+  >>> g.coordinates
+  [[[-86.4808333333333, 34.769722222222], [-86.4808333333333, 35.769722222222], [-85.4808333333333, 35.769722222222], [-85.4808333333333, 34.769722222222], [-86.4808333333333, 34.769722222222]]]
 
 And check that the representative point is a centroid
 
@@ -71,24 +53,7 @@ And check that the representative point is a centroid
   >>> pt.precision
   'precise'
   >>> pt.coords
-  (-85.980833333333294, 35.269722222222001)
-
-Add another place part
-
-  >>> pid3 = places.invokeFactory('Place', '3', title='Ninoe')
-  >>> p3 = places[pid3]
-  >>> _ = p3.invokeFactory('Location', 'x', geometry='Point:[0.0, 0.0]')
-  >>> p2.setParts([p1, p3])
-  >>> g2 = IGeoreferenced(p2)
-  >>> gi2 = g2.__geo_interface__
-  >>> gi2['type']
-  'Feature'
-  >>> g2.type
-  'Polygon'
-  >>> g2.coordinates
-  [[[-86.480833333333294, 0.0], [-86.480833333333294, 35.769722222222001], [0.0, 35.769722222222001], [0.0, 0.0], [-86.480833333333294, 0.0]]]
-  >>> g2.precision
-  'precise'
+  (-85.9808333333333, 35.269722222222)
 
 
 Check temporally sensitive Name adapter
@@ -108,13 +73,13 @@ Check temporally sensitive Name adapter
   >>> gn.type
   'Point'
   >>> gn.coordinates
-  [-85.480833333333294, 35.769722222222001]
+  [-85.4808333333333, 35.769722222222]
 
 And the representative point
 
   >>> pt = IRepresentativePoint(ninoe)
   >>> pt.coords
-  (-85.480833333333294, 35.769722222222001)
+  (-85.4808333333333, 35.769722222222)
   >>> pt.precision
   'precise'
 

@@ -167,19 +167,7 @@ class PlaceGeoItem(object):
         else:
             geo_parts = []
             for ob in self.context.getFeatures():
-                try:
-                    # rule out reference circles
-                    assert self.context not in ob.getParts()
-                    geo_parts.append(IGeoreferenced(ob))
-                except:
-                    pass
-            for ob in self.context.getParts():
-                try:
-                    # rule out reference circles
-                    assert self.context not in ob.getParts()
-                    geo_parts.append(IGeoreferenced(ob))
-                except:
-                    pass
+                geo_parts.append(IGeoreferenced(ob))
             if geo_parts:
                 self.geo = self._geo(geo_parts)
         if self.geo is None:
@@ -272,19 +260,7 @@ class NameGeoItem(PlaceGeoItem):
         else:
             geo_parts = []
             for ob in self.context.getFeatures():
-                try:
-                    # rule out reference circles
-                    assert self.context not in ob.getParts()
-                    geo_parts.append(IGeoreferenced(ob))
-                except:
-                    pass
-            for ob in self.context.getParts():
-                try:
-                    # rule out reference circles
-                    assert self.context not in ob.getParts()
-                    geo_parts.append(IGeoreferenced(ob))
-                except:
-                    pass
+                geo_parts.append(IGeoreferenced(ob))
             if geo_parts:
                 self.geo = self._geo(geo_parts)
         if self.geo is None:
