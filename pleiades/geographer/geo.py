@@ -301,14 +301,14 @@ class RepresentativePoint(object):
         try:
             return self.coords[0]
         except TypeError:
-            raise NotLocatesError("Context %s is unlocated" % self.context)
+            raise NotLocatedError("Context %s is unlocated" % self.context)
 
     @property
     def y(self):
         try:
             return self.coords[1]
         except TypeError:
-            raise NotLocatesError("Context %s is unlocated" % self.context)
+            raise NotLocatedError("Context %s is unlocated" % self.context)
 
 
 # Functions to support synoptic views of Pleiades data.
