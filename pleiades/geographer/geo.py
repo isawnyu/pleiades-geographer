@@ -32,7 +32,6 @@ from AccessControl.SecurityManagement import newSecurityManager
 from AccessControl.SecurityManagement import setSecurityManager
 from AccessControl.User import nobody
 from collective.geo.geographer.interfaces import IGeoreferenced
-from operator import itemgetter
 from pleiades.capgrids import Grid, parseURL
 from pleiades.geographer.interfaces import IConnected, ILocated, IExtent
 from pleiades.geographer.interfaces import IRepresentativePoint
@@ -398,18 +397,6 @@ class PlaceLocated(object):
         self.context = context
         self.locations = self.context.getLocations()
 
-    def ratedPreciseGeoms(self):
-        return sorted(
-            (geometry(o) for o in filter(isPrecise, self.locations)),
-            reverse=True,
-        )
-
-    def ratedGridGeoms(self):
-        return sorted(
-            (mapping(LocationGeoItem(o)) for o in filter(isGridded, self.locations)),
-            reverse=True,
-        )
-
 
 class PlaceConnected(object):
     implements(IConnected)
@@ -462,21 +449,6 @@ class PlaceExtent(object):
     @memoize
     def reprExtent(self):
         points = []
-        located = PlaceLocated(self.context)
-        rated = located.ratedPreciseGeoms()
-
-        if rated:
-            positively_rated = filter(lambda x: x[0] > 0, rated)
-            unrated = filter(lambda x: x[0] == 0, rated)
-
-            if positively_rated:
-                for r, g in positively_rated:
-                    points.extend(list(explode(g['coordinates'])))
-            if not points and unrated:
-                for r, g in unrated:
-                    points.extend(list(explode(g['coordinates'])))
-
-            return hull(points), "precise"
 
         connected = PlaceConnected(self.context)
         extents = self.depth and connected.preciseExtents() or None
@@ -484,12 +456,6 @@ class PlaceExtent(object):
             for g in extents:
                 points.extend(list(explode(g['coordinates'])))
             return hull(points), "related"
-
-        rated = located.ratedGridGeoms()
-        if rated:
-            for r, g in rated:
-                points.extend(list(explode(g['coordinates'])))
-            return hull(points), "rough"
 
         extents = self.depth and connected.relatedExtents() or None
         if extents:
@@ -533,7 +499,6 @@ class PlaceReprPt(object):
 
     @memoize
     def reprPoint(self):
-        located = PlaceLocated(self.context)
         connected = PlaceConnected(self.context)
         extents = connected.preciseExtents()
         if extents:
@@ -543,15 +508,6 @@ class PlaceReprPt(object):
                 c[:] = (c and c[0] or 0.0
                     ) + centroid.x, (c and c[1] or 0.0) + centroid.y
             return c[0]/len(extents), c[1]/len(extents), "related"
-
-        rated = located.ratedGridGeoms()
-        if rated:
-            c = []
-            for r, g in rated:
-                centroid = shape(g).centroid
-                c[:] = (c and c[0] or 0.0
-                    ) + centroid.x, (c and c[1] or 0.0) + centroid.y
-            return c[0]/len(rated), c[1]/len(rated), "rough"
 
         extents = connected.relatedExtents()
         if extents:
