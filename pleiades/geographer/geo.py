@@ -402,14 +402,12 @@ class PlaceLocated(object):
         return sorted(
             (geometry(o) for o in filter(isPrecise, self.locations)),
             reverse=True,
-            key=itemgetter(0),
         )
 
     def ratedGridGeoms(self):
         return sorted(
             (mapping(LocationGeoItem(o)) for o in filter(isGridded, self.locations)),
             reverse=True,
-            key=itemgetter(0),
         )
 
 
