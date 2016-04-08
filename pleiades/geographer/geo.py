@@ -534,39 +534,6 @@ class PlaceReprPt(object):
     @memoize
     def reprPoint(self):
         located = PlaceLocated(self.context)
-        rated = located.ratedPreciseGeoms()
-        if rated:
-            sum_positive = []
-            weight_positive = 0.0
-            sum_unrated = []
-            weight_unrated = 0.0
-
-            for r, g in rated:
-                centroid = shape(g).centroid
-                if r > 0.0:
-                    sum_positive[:] = (
-                        (sum_positive and sum_positive[0] or 0.0) + r*centroid.x,
-                        (sum_positive and sum_positive[1] or 0.0) + r*centroid.y)
-                    weight_positive += r
-                else:
-                    sum_unrated[:] = (
-                        (sum_unrated and sum_unrated[0] or 0.0) + centroid.x,
-                        (sum_unrated and sum_unrated[1] or 0.0) + centroid.y)
-                    weight_unrated += 1.0
-
-            if weight_positive > 0.0:
-                return (
-                    sum_positive[0]/weight_positive,
-                    sum_positive[1]/weight_positive,
-                    "precise")
-            elif weight_unrated > 0.0:
-                return (
-                    sum_unrated[0]/weight_unrated,
-                    sum_unrated[1]/weight_unrated,
-                    "precise")
-            else:
-                raise RuntimeError("Rated locations summed improperly")
-
         connected = PlaceConnected(self.context)
         extents = connected.preciseExtents()
         if extents:
