@@ -34,7 +34,6 @@ from AccessControl.User import nobody
 from collective.geo.geographer.interfaces import IGeoreferenced
 from operator import itemgetter
 from pleiades.capgrids import Grid, parseURL
-from pleiades.contentratings.basic import rating
 from pleiades.geographer.interfaces import IConnected, ILocated, IExtent
 from pleiades.geographer.interfaces import IRepresentativePoint
 from plone.memoize.instance import memoize
@@ -401,14 +400,14 @@ class PlaceLocated(object):
 
     def ratedPreciseGeoms(self):
         return sorted(
-            ((rating(o), geometry(o)) for o in filter(isPrecise, self.locations)),
+            (geometry(o) for o in filter(isPrecise, self.locations)),
             reverse=True,
             key=itemgetter(0),
         )
 
     def ratedGridGeoms(self):
         return sorted(
-            ((rating(o), mapping(LocationGeoItem(o))) for o in filter(isGridded, self.locations)),
+            (mapping(LocationGeoItem(o)) for o in filter(isGridded, self.locations)),
             reverse=True,
             key=itemgetter(0),
         )
