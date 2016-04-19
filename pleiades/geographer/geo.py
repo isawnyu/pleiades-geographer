@@ -33,7 +33,7 @@ from AccessControl.SecurityManagement import setSecurityManager
 from AccessControl.User import nobody
 from collective.geo.geographer.interfaces import IGeoreferenced
 from pleiades.capgrids import Grid, parseURL
-from pleiades.geographer.interfaces import IConnected, ILocated, IExtent
+from pleiades.geographer.interfaces import IConnected, IExtent
 from pleiades.geographer.interfaces import IRepresentativePoint
 from plone.memoize.instance import memoize
 from Products.PleiadesEntity.content.interfaces import ILocation
@@ -361,7 +361,7 @@ def zgeo_geometry_centroid(brain):
     else:
         return tuple(asShape(geom).centroid.coords)[0]
 
-# New implementations of ILocated and IConnected
+# New implementation of IConnected
 
 
 def geometry(o):
@@ -391,11 +391,16 @@ def isGridded(o):
 
 
 class PlaceLocated(object):
-    implements(ILocated)
 
     def __init__(self, context):
         self.context = context
         self.locations = self.context.getLocations()
+
+    def preciseGeoms(self):
+        return [geometry(o) for o in filter(isPrecise, self.locations)]
+
+    def gridGeoms(self):
+        return [mapping(LocationGeoItem(o)) for o in filter(isGridded, self.locations)]
 
 
 class PlaceConnected(object):
@@ -450,12 +455,25 @@ class PlaceExtent(object):
     def reprExtent(self):
         points = []
 
+        located = PlaceLocated(self.context)
+        geoms = located.preciseGeoms()
+        if geoms:
+            for g in geoms:
+                points.extend(list(explode(g['coordinates'])))
+            return hull(points), "precise"
+
         connected = PlaceConnected(self.context)
         extents = self.depth and connected.preciseExtents() or None
         if extents:
             for g in extents:
                 points.extend(list(explode(g['coordinates'])))
             return hull(points), "related"
+
+        gridGeoms = located.gridGeoms()
+        if gridGeoms:
+            for g in gridGeoms:
+                points.extend(list(explode(g['coordinates'])))
+            return hull(points), "rough"
 
         extents = self.depth and connected.relatedExtents() or None
         if extents:
@@ -499,6 +517,16 @@ class PlaceReprPt(object):
 
     @memoize
     def reprPoint(self):
+        located = PlaceLocated(self.context)
+        geoms = located.preciseGeoms()
+        if geoms:
+            c = []
+            for g in geoms:
+                centroid = shape(g).centroid
+                c[:] = (c and c[0] or 0.0
+                    ) + centroid.x, (c and c[1] or 0.0) + centroid.y
+            return c[0] / len(geoms), c[1] / len(geoms), "precise"
+
         connected = PlaceConnected(self.context)
         extents = connected.preciseExtents()
         if extents:
@@ -508,6 +536,15 @@ class PlaceReprPt(object):
                 c[:] = (c and c[0] or 0.0
                     ) + centroid.x, (c and c[1] or 0.0) + centroid.y
             return c[0]/len(extents), c[1]/len(extents), "related"
+
+        gridGeoms = located.gridGeoms()
+        if gridGeoms:
+            c = []
+            for g in gridGeoms:
+                centroid = shape(g).centroid
+                c[:] = (c and c[0] or 0.0  
+                    ) + centroid.x, (c and c[1] or 0.0) + centroid.y
+            return c[0] / len(gridGeoms), c[1] / len(gridGeoms), "rough"
 
         extents = connected.relatedExtents()
         if extents:
