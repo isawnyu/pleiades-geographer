@@ -62,24 +62,21 @@ class LocationGeoItem(object):
         """
         self.context = context
         dc_coverage = self.context.getLocation()
-        try:
-            if context._getGeometryRaw():
-                self.geo = json.loads(context.getGeometryJSON())
-                g = asShape(self.geo)
-                self.geo.update(bbox=g.bounds)
-            elif dc_coverage.startswith('http://atlantides.org/capgrids'):
-                mapid, gridsquare = parseURL(dc_coverage)
-                grid = Grid(mapid, gridsquare)
-                self.geo = dict(
-                    bbox=grid.bounds,
-                    relation='relates',
-                    type=grid.type,
-                    coordinates=grid.coordinates,
-                )
-            else:
-                raise ValueError("Context is unlocated")
-        except Exception as e:
-            raise ValueError("Object cannot be adapted")
+        if context._getGeometryRaw():
+            self.geo = json.loads(context.getGeometryJSON())
+            g = asShape(self.geo)
+            self.geo.update(bbox=g.bounds)
+        elif dc_coverage.startswith('http://atlantides.org/capgrids'):
+            mapid, gridsquare = parseURL(dc_coverage)
+            grid = Grid(mapid, gridsquare)
+            self.geo = dict(
+                bbox=grid.bounds,
+                relation='relates',
+                type=grid.type,
+                coordinates=grid.coordinates,
+            )
+        else:
+            raise ValueError("Context is unlocated")
 
     @property
     def __geo_interface__(self):
