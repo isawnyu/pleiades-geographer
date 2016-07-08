@@ -405,9 +405,7 @@ class PlaceConnected(object):
 
     def __init__(self, context):
         self.context = context
-        self.connections = set(
-            self.context.getRefs("connectsWith")
-            ).symmetric_difference(set(self.context.getBRefs("connectsWith")))
+        self.connections = context.getConnectedPlaces()
 
     def preciseExtents(self):
         return map(lambda x: x.extent,
