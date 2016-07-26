@@ -397,7 +397,15 @@ class PlaceLocated(object):
         return [geometry(o) for o in filter(isPrecise, self.locations)]
 
     def gridGeoms(self):
-        return [mapping(LocationGeoItem(o)) for o in filter(isGridded, self.locations)]
+        res = []
+        for o in filter(isGridded, self.locations):
+            try:
+                item = LocationGeoItem(o)
+            except (ValueError, IndexError):
+                pass
+            else:
+                res.append(mapping(item))
+        return res
 
 
 class PlaceConnected(object):
