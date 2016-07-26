@@ -67,14 +67,19 @@ class LocationGeoItem(object):
             g = asShape(self.geo)
             self.geo.update(bbox=g.bounds)
         elif dc_coverage.startswith('http://atlantides.org/capgrids'):
-            mapid, gridsquare = parseURL(dc_coverage)
-            grid = Grid(mapid, gridsquare)
-            self.geo = dict(
-                bbox=grid.bounds,
-                relation='relates',
-                type=grid.type,
-                coordinates=grid.coordinates,
-            )
+            try:
+                mapid, gridsquare = parseURL(dc_coverage)
+                grid = Grid(mapid, gridsquare)
+                self.geo = dict(
+                    bbox=grid.bounds,
+                    relation='relates',
+                    type=grid.type,
+                    coordinates=grid.coordinates,
+                )
+            except:
+                raise NotLocatedError(
+                    "Could not determine CAP grid square {}".format(
+                        dc_coverage))
         else:
             raise ValueError("Context is unlocated")
 
@@ -401,7 +406,7 @@ class PlaceLocated(object):
         for o in filter(isGridded, self.locations):
             try:
                 item = LocationGeoItem(o)
-            except (ValueError, IndexError):
+            except NotLocatedError:
                 pass
             else:
                 res.append(mapping(item))
