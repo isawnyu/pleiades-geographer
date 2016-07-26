@@ -568,7 +568,10 @@ class PlaceReprPt(object):
 
     @property
     def coords(self):
-        return tuple(self.reprPoint()[:2])
+        x, y, precision = self.reprPoint()
+        if precision == 'unlocated':
+            return None
+        return x, y
 
     @property
     def x(self):
