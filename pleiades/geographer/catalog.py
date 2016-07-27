@@ -51,11 +51,11 @@ def zgeo_geometry_value(obj, **kw):
         sm = getSecurityManager()
         newSecurityManager(None, nobody.__of__(obj.acl_users))
         ex = IExtent(obj)
-        setSecurityManager(sm)
         return ex.extent
     except:
-        setSecurityManager(sm)
         raise AttributeError
+    finally:
+        setSecurityManager(sm)
 
 
 @indexer(ILocatable)
@@ -65,11 +65,11 @@ def reprPt_value(obj, **kw):
         sm = getSecurityManager()
         newSecurityManager(None, nobody.__of__(obj.acl_users))
         pt = IRepresentativePoint(obj)
-        setSecurityManager(sm)
         return pt.coords, pt.precision
     except:
-        setSecurityManager(sm)
         raise AttributeError
+    finally:
+        setSecurityManager(sm)
 
 
 @indexer(ILocatable)
@@ -79,8 +79,8 @@ def bbox_value(obj, **kw):
         sm = getSecurityManager()
         newSecurityManager(None, nobody.__of__(obj.acl_users))
         ex = IExtent(obj)
-        setSecurityManager(sm)
         return tuple(shape(ex.extent).bounds)
     except:
-        setSecurityManager(sm)
         raise AttributeError
+    finally:
+        setSecurityManager(sm)

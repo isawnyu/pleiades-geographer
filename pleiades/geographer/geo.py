@@ -320,15 +320,15 @@ def extent(obj):
     try:
         newSecurityManager(None, nobody.__of__(obj.acl_users))
         ex = IExtent(obj)
-        setSecurityManager(sm)
-        return {'extent': ex.extent, 'precision': ex.precision}
+        res = {'extent': ex.extent, 'precision': ex.precision}
     except NotLocatedError:
-        setSecurityManager(sm)
-        return {'extent': None, 'precision': 'unlocated'}
+        res = {'extent': None, 'precision': 'unlocated'}
     except:
-        setSecurityManager(sm)
         log.warn("Failed to adapt %s in 'location_precision'", obj)
-        return None
+        res = None
+    finally:
+        setSecurityManager(sm)
+    return res
 
 
 def location_precision(obj):
@@ -344,15 +344,15 @@ def representative_point(obj):
     try:
         newSecurityManager(None, nobody.__of__(obj.acl_users))
         pt = IRepresentativePoint(obj)
-        setSecurityManager(sm)
-        return {'precision': pt.precision, 'coords': pt.coords}
+        res = {'precision': pt.precision, 'coords': pt.coords}
     except NotLocatedError:
-        setSecurityManager(sm)
-        return {'precision': 'unlocated', 'coords': None}
+        res = {'precision': 'unlocated', 'coords': None}
     except:
-        setSecurityManager(sm)
         log.warn("Failed to adapt %s in 'representative_point'", obj)
-        return None
+        res = None
+    finally:
+        setSecurityManager(sm)
+    return res
 
 
 def zgeo_geometry_centroid(brain):
