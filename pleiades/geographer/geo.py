@@ -562,6 +562,52 @@ class PlaceReprPt(object):
             centroid = self.average_centroid_of_geometries(geoms[:1])
             return centroid[0], centroid[1], "precise"
 
+        try:
+            centroid = self.centroid_by_connection_type({
+                'part_of_physical',
+                'connection',
+                'at',
+                'on'
+            })
+        except ValueError:
+            pass
+        else:
+            return centroid[0], centroid[1], "related"
+
+        try:
+            centroid = self.centroid_by_connection_type({
+                'part_of_regional',
+                'part_of_analytical',
+            })
+        except ValueError:
+            pass
+        else:
+            return centroid[0], centroid[1], "related"
+
+        try:
+            centroid = self.centroid_by_connection_type({
+                'near',
+                'intersects',
+                'bounds',
+                'flows_into',
+                'route_next',
+                'abuts',
+                'communicates',
+            }, bidirectional=True)
+        except ValueError:
+            pass
+        else:
+            return centroid[0], centroid[1], "related"
+
+        try:
+            centroid = self.centroid_by_connection_type({
+                'member',
+                'dependent',
+            })
+        except ValueError:
+            pass
+        else:
+            return centroid[0], centroid[1], "related"
 
         connected = PlaceConnected(self.context)
         extents = connected.preciseExtents()
