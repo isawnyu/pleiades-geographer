@@ -398,8 +398,11 @@ class PlaceLocated(object):
         self.context = context
         self.locations = self.context.getLocations()
 
-    def preciseGeoms(self):
-        return [geometry(o) for o in filter(isPrecise, self.locations)]
+    def preciseGeoms(self, sort_key=None):
+        locations = filter(isPrecise, self.locations)
+        if sort_key:
+            locations = sorted(locations, key=sort_key)
+        return [geometry(o) for o in locations]
 
     def gridGeoms(self):
         res = []
@@ -526,7 +529,10 @@ class PlaceReprPt(object):
     @memoize
     def reprPoint(self):
         located = PlaceLocated(self.context)
-        geoms = located.preciseGeoms()
+        # The first item in the tuple sorts None above all other values. The second item sorts lower
+        # values before higher values
+        best_first = lambda location: (location.getAccuracy().value == None, location.getAccuracy().value)
+        geoms = located.preciseGeoms(sort_key=best_first)
         if geoms:
             c = []
             for g in geoms:
