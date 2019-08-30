@@ -526,6 +526,31 @@ class PlaceReprPt(object):
     def __init__(self, context):
         self.context = context
 
+    @staticmethod
+    def average_centroid_of_geometries(geometries):
+        centroids = []
+        for g in geometries:
+            centroid = shape(g).centroid
+            centroids.append(centroid)
+        average_x = sum(centroid.x for centroid in centroids) / len(centroids)
+        average_y = sum(centroid.y for centroid in centroids) / len(centroids)
+        return average_x, average_y
+
+
+    def centroid_by_connection_type(self, relationshipTypes, bidirectional=False):
+        connections = self.context.getReverseConnections()  # Find inbound connections only by default
+        if bidirectional:
+            connections += self.context.getSubConnections()
+        matching_connections = filter(lambda conn: conn.relationshipType in relationshipTypes, connections)
+        if matching_connections:
+            extents = [PlaceExtent(o, depth=0) for o in matching_connections]
+            extents = filter(lambda x: x.precision == "precise", extents)
+            if extents:
+                centroid = self.average_centroid_of_geometries(extent.extent for extent in extents)
+                return centroid
+        raise ValueError("No centroid found")
+
+
     @memoize
     def reprPoint(self):
         located = PlaceLocated(self.context)
@@ -534,40 +559,25 @@ class PlaceReprPt(object):
         best_first = lambda location: (location.getAccuracy().value == None, location.getAccuracy().value)
         geoms = located.preciseGeoms(sort_key=best_first)
         if geoms:
-            c = []
-            for g in geoms:
-                centroid = shape(g).centroid
-                c[:] = (c and c[0] or 0.0
-                    ) + centroid.x, (c and c[1] or 0.0) + centroid.y
-            return c[0] / len(geoms), c[1] / len(geoms), "precise"
+            centroid = self.average_centroid_of_geometries(geoms[:1])
+            return centroid[0], centroid[1], "precise"
+
 
         connected = PlaceConnected(self.context)
         extents = connected.preciseExtents()
         if extents:
-            c = []
-            for g in extents:
-                centroid = shape(g).centroid
-                c[:] = (c and c[0] or 0.0
-                    ) + centroid.x, (c and c[1] or 0.0) + centroid.y
-            return c[0]/len(extents), c[1]/len(extents), "related"
+            centroid = self.average_centroid_of_geometries(extents)
+            return centroid[0], centroid[1], "related"
 
         gridGeoms = located.gridGeoms()
         if gridGeoms:
-            c = []
-            for g in gridGeoms:
-                centroid = shape(g).centroid
-                c[:] = (c and c[0] or 0.0  
-                    ) + centroid.x, (c and c[1] or 0.0) + centroid.y
-            return c[0] / len(gridGeoms), c[1] / len(gridGeoms), "rough"
+            centroid = self.average_centroid_of_geometries(gridGeoms)
+            return centroid[0], centroid[1], "rough"
 
         extents = connected.relatedExtents()
         if extents:
-            c = []
-            for g in extents:
-                centroid = shape(g).centroid
-                c[:] = (c and c[0] or 0.0
-                    ) + centroid.x, (c and c[1] or 0.0) + centroid.y
-            return c[0]/len(extents), c[1]/len(extents), "rough"
+            centroid = self.average_centroid_of_geometries(extents)
+            return centroid[0], centroid[1], "rough"
 
         # The end.
         return None, None, "unlocated"
