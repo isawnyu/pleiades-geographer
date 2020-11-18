@@ -565,7 +565,6 @@ class PlaceReprPt(object):
         try:
             centroid = self.centroid_by_connection_type({
                 'part_of_physical',
-                'connection',
                 'at',
                 'on'
             })
@@ -578,6 +577,7 @@ class PlaceReprPt(object):
             centroid = self.centroid_by_connection_type({
                 'part_of_regional',
                 'part_of_analytical',
+                'part_of_admin',
             })
         except ValueError:
             pass
