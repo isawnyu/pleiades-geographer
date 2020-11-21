@@ -556,7 +556,10 @@ class PlaceReprPt(object):
         located = PlaceLocated(self.context)
         # The first item in the tuple sorts None above all other values. The second item sorts lower
         # values before higher values
-        best_first = lambda location: (location.getAccuracy().value == None, location.getAccuracy().value)
+        best_first = lambda location: (
+                location.getAccuracy() and location.getAccuracy().value == None or True,
+                location.getAccuracy() and location.getAccuracy().value or None
+            )
         geoms = located.preciseGeoms(sort_key=best_first)
         if geoms:
             centroid = self.average_centroid_of_geometries(geoms[:1])
@@ -565,7 +568,6 @@ class PlaceReprPt(object):
         try:
             centroid = self.centroid_by_connection_type({
                 'part_of_physical',
-                'connection',
                 'at',
                 'on'
             })
@@ -578,6 +580,7 @@ class PlaceReprPt(object):
             centroid = self.centroid_by_connection_type({
                 'part_of_regional',
                 'part_of_analytical',
+                'part_of_admin',
             })
         except ValueError:
             pass
