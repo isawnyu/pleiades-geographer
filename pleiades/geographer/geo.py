@@ -557,7 +557,7 @@ class PlaceReprPt(object):
         # The first item in the tuple sorts None above all other values. The second item sorts lower
         # values before higher values
         best_first = lambda location: (
-                location.getAccuracy() and location.getAccuracy().value == None or True,
+                location.getAccuracy().value is None if location.getAccuracy() else True,
                 location.getAccuracy() and location.getAccuracy().value or None
             )
         geoms = located.preciseGeoms(sort_key=best_first)
