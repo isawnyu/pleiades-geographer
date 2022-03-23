@@ -330,6 +330,12 @@ def extent(obj):
         setSecurityManager(sm)
     return res
 
+def is_clockwise(poly):
+    total = poly[-1][0] * poly[0][1] - poly[0][0] * poly[-1][1]
+    for i in range(len(poly) - 1):
+        total += poly[i][0] * poly[i + 1][1] - poly[i + 1][0] * poly[i][1]
+    return total <= 0
+
 
 def location_precision(obj):
     # "unlocated", "rough", "related", "precise"
