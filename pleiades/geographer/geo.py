@@ -560,15 +560,9 @@ class PlaceReprPt(object):
     @memoize
     def reprPoint(self):
         located = PlaceLocated(self.context)
-        # The first item in the tuple sorts None above all other values. The second item sorts lower
-        # values before higher values
-        best_first = lambda location: (
-                location.getAccuracy() and location.getAccuracy().value == None or True,
-                location.getAccuracy() and location.getAccuracy().value or None
-            )
-        geoms = located.preciseGeoms(sort_key=best_first)
+        geoms = located.preciseGeoms()
         if geoms:
-            centroid = self.average_centroid_of_geometries(geoms[:1])
+            centroid = self.average_centroid_of_geometries(geoms)
             return centroid[0], centroid[1], "precise"
 
         try:
