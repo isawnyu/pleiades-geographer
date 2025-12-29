@@ -27,6 +27,7 @@
 # U.S. National Endowment for the Humanities (http://www.neh.gov).
 # ===========================================================================
 
+from Acquisition import aq_parent
 from AccessControl import getSecurityManager
 from AccessControl.SecurityManagement import newSecurityManager
 from AccessControl.SecurityManagement import setSecurityManager
@@ -34,14 +35,17 @@ from AccessControl.User import nobody
 from collective.geo.geographer.interfaces import IGeoreferenced
 from pleiades.capgrids import Grid, parseURL
 from pleiades.geographer.interfaces import IConnected, IExtent
-from pleiades.geographer.interfaces import IRepresentativePoint
+from pleiades.geographer.interfaces import IFootprint, IRepresentativePoint
 from plone.memoize.instance import memoize
+from Products.CMFCore.utils import getToolByName
 from Products.PleiadesEntity.content.interfaces import ILocation
 from Products.PleiadesEntity.content.interfaces import IPlace
 from Products.PleiadesEntity.time import temporal_overlap
 from shapely.geometry import asShape, mapping, MultiPoint, shape
+from shapely.ops import unary_union
 from zope.interface import implements
 import logging
+import math
 import simplejson as json
 
 log = logging.getLogger('pleiades.geographer')
@@ -330,6 +334,20 @@ def extent(obj):
         setSecurityManager(sm)
     return res
 
+
+def footprint(obj):
+    """Footprint geometry for a place, executed as Anonymous."""
+    sm = getSecurityManager()
+    try:
+        newSecurityManager(None, nobody.__of__(obj.acl_users))
+        fp = IFootprint(obj)
+        return fp.footprint()
+    except Exception:
+        log.warn("Failed to adapt %s in 'footprint'", obj)
+        return None
+    finally:
+        setSecurityManager(sm)
+
 def is_clockwise(poly):
     total = poly[-1][0] * poly[0][1] - poly[0][0] * poly[-1][1]
     for i in range(len(poly) - 1):
@@ -509,6 +527,153 @@ class PlaceExtent(object):
     @property
     def precision(self):
         return self.reprExtent()[1]
+
+
+def meters_to_degrees(distance_meters, latitude):
+    """Approximate meters-to-degrees conversion with latitude adjustment."""
+    try:
+        dist = float(distance_meters)
+        lat_rad = math.radians(float(latitude))
+        deg_lat = dist / 111320.0
+        # Avoid divide-by-zero near the poles
+        deg_lon = deg_lat / max(math.cos(lat_rad), 1.0e-6)
+        return (deg_lat + deg_lon) / 2.0
+    except (TypeError, ValueError):
+        return None
+
+
+class PlaceFootprint(object):
+    implements(IFootprint)
+
+    def __init__(self, context):
+        self.context = context
+
+    def _workflow_state(self, obj):
+        try:
+            wf = getToolByName(self.context, 'portal_workflow')
+        except Exception:
+            return None
+        try:
+            return wf.getInfoFor(obj, 'review_state')
+        except Exception:
+            return None
+
+    def _is_published(self, obj):
+        return self._workflow_state(obj) == 'published'
+
+    def _accuracy_value(self, location):
+        accuracy = getattr(location, 'getAccuracy', lambda: None)()
+        if not accuracy:
+            return None
+        try:
+            return accuracy.getField('value').get(accuracy)
+        except Exception:
+            return None
+
+    def _location_buffers(self):
+        buffers = []
+        for loc in self.context.getLocations():
+            if not self._is_published(loc):
+                continue
+            try:
+                georef = IGeoreferenced(loc)
+            except (ValueError, NotLocatedError):
+                continue
+            if georef.precision == 'rough':
+                continue
+            accuracy_val = self._accuracy_value(loc)
+            if accuracy_val in (None, ''):
+                continue
+            geom_mapping = geometry(loc)
+            if not geom_mapping:
+                continue
+            g = shape(geom_mapping)
+            dist = meters_to_degrees(accuracy_val, g.centroid.y)
+            if dist is None:
+                continue
+            buffers.append(g.buffer(dist))
+        return buffers
+
+    def _connected_footprints(self, visited):
+        geoms = []
+        inbound_types = {
+            'at',
+            'capital',
+            'part_of_admin',
+            'part_of_analytical',
+            'part_of_physical',
+            'part_of_regional',
+            'same_as',
+        }
+        outbound_types = {'same_as'}
+
+        for conn in self.context.getReverseConnections():
+            if conn.relationshipType not in inbound_types:
+                continue
+            if not self._is_published(conn):
+                continue
+            place = aq_parent(conn)
+            if not IPlace.providedBy(place) or not self._is_published(place):
+                continue
+            uid = place.UID()
+            if uid in visited:
+                continue
+            visited.add(uid)
+            try:
+                geom = IFootprint(place).footprint(visited=visited)
+            except Exception:
+                geom = None
+            if geom:
+                geoms.append(shape(geom))
+
+        for conn in self.context.getSubConnections():
+            if conn.relationshipType not in outbound_types:
+                continue
+            if not self._is_published(conn):
+                continue
+            place = conn.getConnection()
+            if not place or not self._is_published(place):
+                continue
+            uid = place.UID()
+            if uid in visited:
+                continue
+            visited.add(uid)
+            try:
+                geom = IFootprint(place).footprint(visited=visited)
+            except Exception:
+                geom = None
+            if geom:
+                geoms.append(shape(geom))
+
+        return geoms
+
+    def footprint(self, visited=None):
+        root_call = visited is None
+        if root_call and hasattr(self, '_cached_footprint'):
+            return self._cached_footprint
+        if visited is None:
+            visited = set()
+        visited.add(self.context.UID())
+        geoms = []
+        geoms.extend(self._location_buffers())
+        geoms.extend(self._connected_footprints(visited))
+        if not geoms:
+            return None
+        try:
+            merged = unary_union(geoms)
+        except Exception as exc:
+            log.warn("Failed to union footprint geometries for %s: %s", self.context, exc)
+            return None
+        if merged.is_empty:
+            return None
+        if merged.geom_type in ('Polygon', 'MultiPolygon'):
+            footprint_geom = merged
+        else:
+            footprint_geom = merged.convex_hull
+        result = mapping(footprint_geom)
+        if root_call:
+            self._cached_footprint = result
+        return result
 
 
 class LocationExtent(PlaceExtent):
