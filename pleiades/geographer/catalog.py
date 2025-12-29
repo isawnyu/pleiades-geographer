@@ -3,11 +3,12 @@ from AccessControl.SecurityManagement import newSecurityManager
 from AccessControl.SecurityManagement import setSecurityManager
 from AccessControl.User import nobody
 from pleiades.geographer.geo import location_precision, NotLocatedError
-from pleiades.geographer.interfaces import IExtent, ILocatable
+from pleiades.geographer.interfaces import IExtent, IFootprint, ILocatable
 from pleiades.geographer.interfaces import IRepresentativePoint
 from plone.indexer.decorator import indexer
 from Products.CMFCore.utils import getToolByName
 from Products.PleiadesEntity.content.interfaces import ILocation
+from Products.PleiadesEntity.content.interfaces import IPlace
 from shapely.geometry import shape
 import logging
 
@@ -80,6 +81,20 @@ def bbox_value(obj, **kw):
         newSecurityManager(None, nobody.__of__(obj.acl_users))
         ex = IExtent(obj)
         return tuple(shape(ex.extent).bounds)
+    except:
+        raise AttributeError
+    finally:
+        setSecurityManager(sm)
+
+
+@indexer(IPlace)
+def footprint_value(obj, **kw):
+    # Execute this as 'Anonymous'
+    try:
+        sm = getSecurityManager()
+        newSecurityManager(None, nobody.__of__(obj.acl_users))
+        fp = IFootprint(obj).footprint()
+        return fp
     except:
         raise AttributeError
     finally:

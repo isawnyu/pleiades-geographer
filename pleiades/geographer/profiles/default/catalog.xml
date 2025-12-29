@@ -3,5 +3,5 @@
   <column value="zgeo_geometry"/>
   <column value="reprPt"/>
   <column value="bbox"/>
+  <column value="footprint"/>
 </object>
-

@@ -64,11 +64,18 @@
     factory=".geo.PlaceExtent"
     />
 
+  <adapter
+    for="Products.PleiadesEntity.content.interfaces.IPlace"
+    provides=".interfaces.IFootprint"
+    factory=".geo.PlaceFootprint"
+    />
+
   <adapter name="geolocation" factory=".catalog.location_geo"/>
   <adapter name="location_precision" factory=".catalog.location_precision_indexer"/>
   <adapter name="zgeo_geometry" factory=".catalog.zgeo_geometry_value"/>
   <adapter name="reprPt" factory=".catalog.reprPt_value"/>
   <adapter name="bbox" factory=".catalog.bbox_value"/>
+  <adapter name="footprint" factory=".catalog.footprint_value"/>
 
   <browser:view
     for=".interfaces.ILocatable"

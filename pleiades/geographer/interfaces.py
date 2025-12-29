@@ -42,3 +42,10 @@ class IExtent(Interface):
         'related' means that it's computed from precisely located connections
         of the thing. 'rough' means that it's computed from grid locations of
         the thing or roughly located connections.""")
+
+
+class IFootprint(Interface):
+    """A footprint polygon for a content item"""
+
+    def footprint():
+        """Returns a GeoJSON-ish geometry mapping representing the footprint."""
